@@ -1,0 +1,55 @@
+%% Преамбула TeX-файла
+
+% 1. Стиль и язык
+\documentclass[10pt]{style/G7-32} % Стиль (по умолчанию будет 14pt)
+
+% Остальные стандартные настройки убраны в preamble-std.tex
+\include{preamble-std}
+\usepackage{multirow}
+\usepackage{lscape}
+\makeatletter
+\newcommand{\rmnum}[1]{\romannumeral #1}
+\newcommand{\Rmnum}[1]{\expandafter\@slowromancap\romannumeral #1@}
+\makeatother
+\begin{document}
+
+\frontmatter % выключает нумерацию ВСЕГО; здесь начинаются ненумерованные главы: реферат, введение, глоссарий, сокращения и прочее
+
+%\include{parts/00-abstract}
+
+%\tableofcontents
+
+%\include{parts/10-defines}
+%\include{parts/11-abbrev}
+
+%\include{parts/12-intro}
+
+\mainmatter % это включает нумерацию глав и секций в документе ниже
+
+\include{parts/20-analysis}
+%\include{parts/40-design}
+%\include{parts/50-impl}
+%\include{parts/30-research}
+%\include{parts/60-economy}
+%\include{parts/70-ecology}
+
+
+\backmatter %% Здесь заканчивается нумерованная часть документа и начинаются ссылки и заключение
+
+%\include{parts/80-conclusion}
+
+%\include{parts/81-biblio}
+
+\appendix   % Тут идут приложения
+
+%\include{parts/90-appendix1}
+%\include{parts/91-appendix2}
+%\include{parts/92-appendix3}
+%\include{parts/93-appendix4}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
