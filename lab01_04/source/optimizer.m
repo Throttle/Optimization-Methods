@@ -59,13 +59,15 @@ classdef optimizer < handle
         end
         
         %% метод золотого сечения
-        function [x, y, res_a, res_b] = GoldenSectionSearch(this, a, b, eps, stop)
+        function [x, y, res_a, res_b] = GoldenSectionSearch(this, a, b, eps, stop, need_reset)
             if nargin < 5
                 stop = -1;
+            elseif nargin < 6
+                this.reset();
             end
             
             fprintf('==== Метод золотого сечения ====\nОтрезок: a=%f, b=%f\nТочность: eps=%f;\n\tКол-во итераций: stop=%d.\n\n', [a,b,eps,stop]);
-            this.reset();
+            %this.reset();
             tau = (sqrt(5) - 1) / 2;
             interval = b - a;
             
@@ -163,9 +165,9 @@ classdef optimizer < handle
             end
             fprintf('==== Метод парабол ====\nОтрезок: a=%f, b=%f\nТочность: eps=%f;\n', [a, b, eps]);
             this.reset();
-            [xmin, fmin, a, b] = this.GoldenSectionSearch(a, b, eps, golden_stop);
+            [xmin, fmin, a, b] = this.GoldenSectionSearch(a, b, eps, golden_stop, 0);
             
-            x = [a, a+b/2, b];
+            x = [a, (a+b)/2, b];
             f = [this.f(x(1)), this.f(x(2)), this.f(x(3))];
             
             while abs(x(1) - x(3)) > eps
@@ -195,9 +197,9 @@ classdef optimizer < handle
                         x(1) = x_dot;   f(1) = this.f(x(1));
                     end
                 else
-                    disp('Точка х* найдена вне отрезка. Применяем метод золотого сечения.')
-                    [xmin, fmin, a, b] = this.GoldenSectionSearch(x(1), x(2), eps, golden_stop);
-                    x = [a, a+b/2, b];
+                    fprintf('Точка х*(%.7f) найдена вне отрезка [%.7f, %.7f]. Применяем метод золотого сечения.', [x_dot, x(1), x(3)]);
+                    [xmin, fmin, a, b] = this.GoldenSectionSearch(x(1), x(3), eps, golden_stop, 0);
+                    x = [a, (a+b)/2, b];
                     f = [this.f(x(1)), this.f(x(2)), this.f(x(3))];
                 end
             end

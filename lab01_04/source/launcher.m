@@ -14,4 +14,4 @@ optimizer.draw(a, b, 1000);
 %[result, value] = optimizer.RadixSearch(a, b, eps3, 4);
 %[result, value, res_a, res_b] = optimizer.GoldenSectionSearch(a, b, eps3, 0);
 %[result, value] = optimizer.Newton(a, b, eps3, 1e-5);
-[result, value] = optimizer.Parabola(a, b, eps3, 5);
+[result, value] = optimizer.Parabola(a, b, eps1, 6);
