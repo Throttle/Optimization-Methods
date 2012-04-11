@@ -1,19 +1,28 @@
 classdef optimizer < handle
     properties (Constant = true)
+        n = 2,
         delay = 0.3,
-        point_size = 33
+        alpha = 1,
+        betta = 0.5,
+        gamma = 2,
+        delta = 0.5,
+        point_size = 22
     end
     
     properties
         count,
-        points
+        points,
+        color
     end
     
     methods
         %% вычисляемая функция
-        function y = f(this,x)
+        function y = f(this, x)
             this.count = this.count + 1;
-            y = sinh((3*x^4 - x + sqrt(17) - 3) / 2) + sin((5^(1/3) * x^3 - 5^(1/3) * x + 1 - 2 * 5^(1/3))/(-x^3 + x + 2));
+            % 1ая функция
+            y = 4*x(1)*x(2) + 7*x(1)*x(1) + 4*x(2)*x(2) + 6*sqrt(5)*x(1) - 12*sqrt(5)*x(2) + 51;
+            % 2ая функция
+            %y = x(2)*x(2)*x(2) + 2 * x(1) * x(2) + 1 / sqrt(x(1)*x(2));
         end
         
         %% сброс счестчика вызова функции
@@ -21,17 +30,29 @@ classdef optimizer < handle
             this.count = 0;
         end
         
-        %% построение графика функции
-        function draw(this, a, b, n)
-            step = (b - a) / n;
-            x = a : step : b;
-            y = zeros(n + 1, 1);
+        %% построение графика функции в виде семейства линий уровня минимизируемых функций
+        function draw(this, a1, b1, a2, b2, n)
+            step1 = (b1 - a1) / n;
+            step2 = (b2 - a2) / n;
+            x1 = a1 : step1 : b1;
+            x2 = a2 : step2 : b2;
+            %x2 = -10 : step : 2;
+            f = zeros(length(x1), length(x2));
             
-            for i = 1 : n + 1
-                y(i,1) = this.f(x(i));
+            for i = 1 : length(x1)
+                for j = 1 : length(x2)
+                    f(i,j) = this.f([x1(i), x2(j)]);
+                end
             end
-            figure(1);            
-            plot(x, y(:,1));
+            
+            figure(1);
+            levels = -30:5:40;
+            [C,h] = contour(x2, x1, f, levels);
+            %figure(2);
+            %surface(x2,x1,f);
+            %[C,h] = contour(x2, x1, f);
+            set(h,'ShowText','on')
+            %colormap cool
         end
         
         %% прорисовка точки
@@ -39,206 +60,225 @@ classdef optimizer < handle
             scatter(x, y, this.point_size, 'filled');
             pause(this.delay);
         end
+        
+        %% прорисовка симплекса
+        function draw_simplex(this, S, color)
+            if nargin < 3
+                color = this.color;
+            end
+            line([S(2,2), S(1,2)], [S(2,1), S(1,1)], 'Color', color);
+            line([S(3,2), S(1,2)], [S(3,1), S(1,1)], 'Color', color);
+            line([S(3,2), S(2,2)], [S(3,1), S(2,1)], 'Color', color);
+            pause(this.delay);
+        end
+        
+       
+        %% построение симлекса
+        function S = get_simplex(this, x0, a)
+            x = zeros(this.n+1, this.n);
+            for i = 1 : this.n+1
+                for j = 1 : this.n
+                    if i == 1
+                        x(i, j) = x0(j);
+                    elseif i == (j + 1)
+                        x(i, j) = x0(j) + a * (sqrt(this.n + 1) - 1)/(this.n * sqrt(2)); 
+                    else
+                        x(i, j) = x0(j) + a * (sqrt(this.n + 1) + this.n - 1)/(this.n * sqrt(2));
+                    end
+                end
+            end
+            S = x;
+        end
                 
-        %% метод поразрядного поиска
-        function [x, y] = RadixSearch(this, a, b, eps, k)
-            fprintf('==== Метод поразрядного поиска ====\nОтрезок: a=%f, b=%f\nТочность: eps=%f;\nk=%d\n', [a,b,eps,k]);
+        %% метод минимизации по правильному симплексу
+        function [resx, resf] = simple_simplex(this, x0, a, eps)
+            fprintf('==== Метод минимизации по правильному симплексу ====\nБазовая точка: x0=[%f, %f]\nТочность: eps=%f;\nДлина ребра: a=%d.\n\n', [x0(1),x0(2),eps,a]);
+            this.color = 'b';
             this.reset();
-            delta = (b-a) / k;
-            x = a;
-            f0 = this.f(x);
-            fprintf('Начало поиска: delta=%.7f; x=%.7f; f(x)=%.7f\n', [delta,x,f0]);
-            while abs(delta) > eps
-                while (x >= a) && (x <= b)
-                    this.draw_point(x, f0);
-                    x = x + delta;
-                    f1 = this.f(x);
-                    fprintf('f(%.7f)=%.7f\n', [x, f1]);
-                    
-                    if f1 > f0
+            
+            s = this.get_simplex(x0, a);
+            this.draw_simplex(s);
+                
+            f = zeros(this.n+1, 1);    
+            for i = 1 : this.n+1
+                f(i) = this.f(s(i, :));
+            end
+            
+            while true
+                success = false;
+                [sorted_f, unsorted_indexes] = sort(f);
+                for k = length(unsorted_indexes) : -1 : 1
+                    % вычисляем значение точки центра тяжести
+                    maxindex = unsorted_indexes(k);
+                    xc = sum(s) - s(maxindex,:);
+                    this.draw_point(xc(2)/(this.n), xc(1)/(this.n));
+                    new_point = [xc(2)*2/(this.n) - s(maxindex,2), xc(1)*2/(this.n) - s(maxindex,1)];
+                    this.draw_point(new_point(1), new_point(2));
+                    new_f = this.f([new_point(2), new_point(1)]);
+                    if new_f > f(maxindex)
+                        bad_simplex = s;
+                        bad_simplex(maxindex,:) = [new_point(2), new_point(1)];
+                        this.draw_simplex(bad_simplex, 'r');
+                        continue;
+                    else
+                        f(maxindex) = new_f;
+                        s(maxindex,:) = [new_point(2), new_point(1)];
+                        this.draw_simplex(s);
+                        success = true;
                         break;
                     end
-
-                    f0 = f1;
                 end
-                f0 = f1;
-                delta = - delta / k;
-                fprintf('Меняем направление поиска: delta=%.7f\n', delta);
-            end
-            disp('Поиск закончен: достигнута требуемая точность');
-            y = f1;
-            fprintf('xmin=%.7f\nf(xmin)=%.7f\n', [x,y])
-            fprintf('Кол-во вызовов: %d\n', [this.count])
-        end
-        
-        %% метод золотого сечения
-        function [x, y, res_a, res_b] = GoldenSectionSearch(this, a, b, eps, stop, need_reset)
-            if nargin < 5
-                stop = -1;
-            elseif nargin < 6
-                this.reset();
-            end
-            
-            fprintf('==== Метод золотого сечения ====\nОтрезок: a=%f, b=%f\nТочность: eps=%f;\n\tКол-во итераций: stop=%d.\n\n', [a,b,eps,stop]);
-            %this.reset();
-            tau = (sqrt(5) - 1) / 2;
-            interval = b - a;
-            
-            x1 = a + (1 - tau) * interval;
-            x2 = a + tau * interval;
-            f1 = this.f(x1);
-            f2 = this.f(x2);
-            exec_count = 0;
-            %fprintf('Начало поиска:\n\tотрезок: a=%.7f; b=%.7f;\n\tточки разбиения: f(%.7f)=%.7f; f(%.7f)=%.7f\n', [a, b, x1, f1, x2, f2]);
-            while (abs(interval) > eps) && (exec_count - stop ~= 0)
                 
-                this.draw_point(x1, f1);
-                this.draw_point(x2, f2);
-                fprintf('-> Итерация %d\nИсходный отрезок:\n\ta=%.7f; b=%.7f;\n\tточки разбиения: f(%.7f)=%.7f; f(%.7f)=%.7f\n\n', [exec_count+1, a, b, x1, f1, x2, f2]);
-                
-                if f1 < f2
-                    b = x2;
-                    interval = b-a;
-                    x2 = x1;
-                    x1 = a + (1 - tau) * interval;
-                    f2 = f1;
-                    f1 = this.f(x1);
-                else
-                    a = x1;
-                    interval = b - a;
-                    x1 = x2;
-                    x2 = a + tau * interval;
-                    f1 = f2;
-                    f2 = this.f(x2);
+                if success == false
+                    minindex = unsorted_indexes(1);
+                    minpoint = s(minindex, :);
+                    for i = 1:this.n+1
+                        if i == minpoint
+                            continue;
+                        end
+                        s(i,1) = minpoint(1) + this.delta * (s(i,1) - minpoint(1));
+                        s(i,2) = minpoint(2) + this.delta * (s(i,2) - minpoint(2));
+                    end
+                    this.color = 'g';
+                    this.draw_simplex(s);
                 end
-                fprintf('Новый отрезок:\n\ta=%.7f; b=%.7f;\n\tзначения функции: f(a)=%.7f; f(b)=%.7f\n\n', [a, b, f1, f2]);
-                exec_count = exec_count + 1;
-            end
-            disp('Поиск закончен: достигнута требуемая точность');
-                        
-            if f1 < f2
-                x = x1;
-                y = f1;
-            else
-                x = x2;
-                y = f2;
-            end
-            
-            fprintf('xmin=%.7f\nf(xmin)=%.7f\n', [x,y])
-            fprintf('Кол-во вызовов: %d\n', [this.count])
-            res_a = a;
-            res_b = b;
-            fprintf('=============\n\n')
-        end
-        
-        %% Модифицированный метод Ньютона
-        function [x, y] = Newton(this, a, b, eps, h)
-            fprintf('==== Модифицированный метод Ньютона ====\nОтрезок: a=%f, b=%f\nТочность: eps=%f;\n', [a, b, eps]);
-            this.reset();
-            x = a;
-            while 1
-                f1 = this.f(x - h);
-                f2 = this.f(x + h);
-                f  = this.f(x);
-                x_prev = x;
-                fprintf('Точка: x=%.7f; f(x)=%.7f\n', [x, f]);
-                this.draw_point(x, f);
-                p = h * (f2 - f1) / (2 * (f2 - 2*f + f1));
                 
-                % модифицированный метод Ньютона
-                alpha = 1;
-                x_new = x - alpha * p;
-                while (x_new < a) || (x_new > b)
-                    fprintf('Точка (x=%.7f) за пределами отрезка [%.7f, %.7f]\n', [x_new, a, b]);
-                    alpha = alpha / 2;
-                    x_new = x - alpha * p;
+                summ = 0.0;
+                m = sorted_f(1);
+                for i = 1 : this.n
+                    summ = summ + (f(i) - m)^2;
                 end
-                x = x_new;
+                stopxx = sqrt((s(1,1) - s(2,1))^2 + (s(1,2) - s(2,2))^2) <= eps;
+                stopxf = sqrt(summ / this.n) <= eps;
                 
-                if abs(x - x_prev) <= eps
-                    break
-                end
-            end
-            y = f;
-            fprintf('xmin=%.7f\nf(xmin)=%.7f\n', [x,y])
-            fprintf('Кол-во вызовов: %d\n', [this.count])
-            fprintf('==== конец ====\n')
-        end
-        
-        %%
-        function result = r(this,x1,x2)
-            result = x1^2 - x2^2;
-        end
-        
-        %%
-        function result = s(this,x1,x2)
-            result = x1 - x2;
-        end
-        
-        %% Метод парабол
-        function [x, y] = Parabola(this, a, b, eps, golden_stop)
-            if nargin < 5
-                % отключаем выполнение метода золотого сечения
-                golden_stop = 0;
-            end
-            fprintf('==== Метод парабол ====\nОтрезок: a=%f, b=%f\nТочность: eps=%f;\n', [a, b, eps]);
-            this.reset();
-            [xmin, fmin, a, b] = this.GoldenSectionSearch(a, b, eps, golden_stop, 0);
-            
-            x = [a, (a+b)/2, b];
-            f = [this.f(x(1)), this.f(x(2)), this.f(x(3))];
-            
-            while abs(x(1) - x(3)) > eps
-                x_dot = 0.5 * (...
-                    f(1) * this.r(x(2), x(3)) + ...
-                    f(2) * this.r(x(3), x(1)) + ...
-                    f(3) * this.r(x(1), x(2)) ...
-                    ) / (...
-                    f(1) * this.s(x(2), x(3)) + ...
-                    f(2) * this.s(x(3), x(1)) + ...
-                    f(3) * this.s(x(1), x(2))...
-                    );
-                
-                f_dot = this.f(x_dot);
-                this.draw_point(x_dot, f_dot);
-                
-                if (abs(x(2) - x_dot) < eps)
+                if stopxf || stopxx
+                    resx = s(unsorted_indexes(1),:);
+                    resf = sorted_f(1);
+                    fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n', [resx(1),resx(2),resf,this.count]);
                     break;
                 end
+            end
+        end
+        
+        %% метод минимизации по деформируемому симплексу
+        function [resx, resf] = downhill_simplex(this, x0, a, eps)
+            fprintf('==== Метод минимизации по деформируемому симплексу ====\nБазовая точка: x0=[%f, %f]\nТочность: eps=%f;\nДлина ребра: a=%d.\n\n', [x0(1),x0(2),eps,a]);
+            this.color = 'b';
+            this.reset();
+            
+            s = this.get_simplex(x0, a);
+            this.draw_simplex(s);
                 
+            f = zeros(this.n+1, 1);    
+            for i = 1 : this.n+1
+                f(i) = this.f(s(i, :));
+            end
+            
+            
+            while true
+                success = false;
+                [sorted_f, unsorted_indexes] = sort(f);
+                maxindex = unsorted_indexes(length(unsorted_indexes));
+                f_h = sorted_f(this.n+1);
+                f_g = sorted_f(this.n);
+                f_l = sorted_f(1);
                 
-                if (x_dot >= x(2)) && (x_dot <= x(3))
-                    fprintf('Точка х*(%.7f) найдена внутри отрезка [x2,x3]([%.7f, %.7f]).\n', [x_dot, x(2), x(3)]);
-                    if f_dot <= f(2)
-                        fprintf('f(x*)=%.7f <= f(x2)=%.7f.\n', [f_dot, f(2)]);
-                        x(1) = x(2);    f(1) = this.f(x(1));
-                        x(2) = x_dot;   f(2) = this.f(x(2));
+                x_h = s(unsorted_indexes(this.n+1),:);
+                
+                % вычисление центра тяжести симплекса
+                xc = sum(s) - s(maxindex,:);
+                this.draw_point(xc(2)/this.n, xc(1)/this.n);
+                
+                % отражение
+                x_r = [(1 + this.alpha) * xc(2)/this.n - this.alpha * s(maxindex, 2), (1 + this.alpha) * xc(1)/this.n - this.alpha * s(maxindex, 1)];
+                this.draw_point(x_r(1), x_r(2));
+                f_r = this.f([x_r(2), x_r(1)]);
+                
+                if f_r <= f_l
+                    x_e = [(1 + this.gamma * this.alpha) * xc(2)/this.n - this.gamma * this.alpha * s(maxindex, 2), (1 + this.gamma * this.alpha) * xc(1)/this.n - this.gamma * this.alpha * s(maxindex, 1)];
+                    this.draw_point(x_e(1), x_e(2));
+                    f_e = this.f([x_e(2), x_e(1)]);
+                    
+                    if f_e < f_l
+                        f(maxindex) = f_e;
+                        s(maxindex,:) = [x_e(2), x_e(1)];
+                        this.draw_simplex(s);
                     else
-                        fprintf('f(x*)=%.7f > f(x2)=%.7f.\n', [f_dot, f(2)]);
-                        x(3) = x_dot;   f(3) = this.f(x(3));
+                        %bad_simplex = s;
+                        %bad_simplex(maxindex,:) = [new_point(2), new_point(1)];
+                        %this.draw_simplex(bad_simplex, 'r');
+                        f(maxindex) = f_r;
+                        s(maxindex,:) = [x_r(2), x_r(1)];
+                        this.draw_simplex(s);
                     end
-                elseif (x_dot >= x(1)) && (x_dot <= x(2))
-                    fprintf('Точка х*(%.7f) найдена внутри отрезка [x1,x2]([%.7f, %.7f]).\n', [x_dot, x(1), x(2)]);
-                    if f_dot <= f(2)
-                        fprintf('f(x*)=%.7f <= f(x2)=%.7f.\n', [f_dot, f(2)]);
-                        x(3) = x(2);    f(3) = this.f(x(3));
-                        x(2) = x_dot;   f(2) = this.f(x(2));
-                    else
-                        fprintf('f(x*)=%.7f > f(x2)=%.7f.\n', [f_dot, f(2)]);
-                        x(1) = x_dot;   f(1) = this.f(x(1));
-                    end
+                elseif (f_l < f_r) && (f_r <= f_g)    
+                    f(maxindex) = f_r;
+                    s(maxindex,:) = [x_r(2), x_r(1)];
+                    this.draw_simplex(s);
                 else
-                    fprintf('Точка х*(%.7f) найдена вне отрезка [%.7f, %.7f]. Применяем метод золотого сечения.\n', [x_dot, x(1), x(3)]);
-                    [xmin, fmin, a, b] = this.GoldenSectionSearch(x(1), x(3), eps, golden_stop, 0);
-                    x = [a, (a+b)/2, b];
-                    f = [this.f(x(1)), this.f(x(2)), this.f(x(3))];
+                    flag = false;
+                    %if f_r < sorted_f(this.n+1)
+                    if (f_h >= f_r) && (f_r > f_g)
+                        flag = true;
+                        s(maxindex,:) = [x_r(2), x_r(1)];
+                        f(maxindex) = f_r;
+                        x_h = [x_r(2), x_r(1)];
+                        f_h = f_r;
+                    end
+                    if (f_r > f_h)
+                        flag = true;
+                    end
+                    
+                    if flag
+                        % сжатие
+                        % вычисление центра тяжести симплекса
+                        %xc = sum(s) - s(maxindex,:);
+                        %this.draw_point(xc(2)/this.n, xc(1)/this.n);
+                        x_s = [(1 - this.betta) * xc(2)/this.n + this.betta * x_h(2), (1 - this.betta) * xc(1)/this.n + this.betta * x_h(1)];
+                        f_s = this.f([x_s(2), x_s(1)]);
+                        this.draw_point(x_s(1), x_s(2));
+                        if f_s < f_h
+                            s(maxindex,:) = [x_s(2), x_s(1)];
+                            f(maxindex) = f_s;
+                            x_h = [x_s(2), x_s(1)];
+                            f_h = f_s;
+                        else
+                            minindex = unsorted_indexes(1);
+                            minpoint = s(minindex, :);
+                            for i = 1:this.n+1
+                                if i == minindex
+                                    continue
+                                end
+                                s(i,1) = minpoint(1) + this.delta * (s(i,1) - minpoint(1));
+                                s(i,2) = minpoint(2) + this.delta * (s(i,2) - minpoint(2));
+                            end
+                        end
+                    end
+                end
+                this.draw_simplex(s);
+                summ = 0.0;
+                m = sorted_f(1);
+                for i = 1 : this.n
+                    summ = summ + (f(i) - m)^2;
+                end
+                stopxx = sqrt((s(1,1) - s(2,1))^2 + (s(1,2) - s(2,2))^2) <= eps;
+                stopxf = sqrt(summ / this.n) <= eps;
+                
+                if stopxf || stopxx
+                    resx = s(unsorted_indexes(1),:);
+                    resf = sorted_f(1);
+                    fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n', [resx(1),resx(2),resf,this.count]);
+                    break;
                 end
             end
             
-            y = f_dot;
-            x = x_dot;
-            fprintf('xmin=%.7f\nf(xmin)=%.7f\n', [x,y])
-            fprintf('Кол-во вызовов: %d\n', [this.count])
+        end
+       
+        %% использование возможностей Optimization Toolbox Matlab
+        function [resx, resf] = fminsearch(this, x0, eps)
+            fprintf('==== Optimization Toolbox Matlab ====\nБазовая точка: x0=[%f, %f]\nТочность: eps=%f;\n\n', [x0(1),x0(2),eps]);
+            [resx, resf] = fminsearch(@this.f, x0, optimset('TolX', eps));
+            fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n', [resx(1),resx(2),resf,this.count]);
         end
     end
 end

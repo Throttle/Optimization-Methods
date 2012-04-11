@@ -1,18 +1,23 @@
 clear;
-clc;
+%clc;
 
 optimizer = optimizer();
 
-a = 0.0;
-b = 1.0;
-
+x0 = [0.0, sqrt(5)];
+a = 1;
 eps1 = 0.01;
 eps2 = 0.0001;
 eps3 = 0.000001;
 hold on;
-optimizer.draw(a, b, 1000);
-%[result, value] = optimizer.RadixSearch(a, b, eps3, 4);
-[result, value, res_a, res_b] = optimizer.GoldenSectionSearch(a, b, eps3);
-%[result, value] = optimizer.Newton(a, b, eps3, 1e-5);
-%[result, value] = optimizer.Parabola(a, b, eps3, 4);
+
+%% Первая часть
+optimizer.draw(-6, 2, 0, 9, 100);
+% использование метода минизации по правильному симплексу
+optimizer.simple_simplex(x0, a, eps3);
+
+% использование метода минизации по деформируемому симплексу
+%optimizer.downhill_simplex(x0, a, eps3);
+
+
+%optimizer.fminsearch(x0, eps3);
 hold off;
