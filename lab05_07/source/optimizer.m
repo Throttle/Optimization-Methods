@@ -6,7 +6,9 @@ classdef optimizer < handle
         betta = 0.5,
         gamma = 2,
         delta = 0.5,
-        point_size = 22
+        point_size = 22,
+        max_it = 500, 
+        div_val = 10
     end
     
     properties
@@ -58,6 +60,12 @@ classdef optimizer < handle
         %% прорисовка точки
         function draw_point(this, x, y)
             scatter(x, y, this.point_size, 'filled');
+            pause(this.delay);
+        end
+        
+        %% прорисовка линии
+        function draw_line(this, p1, p2)
+            line([p1(2), p2(2)], [p1(1), p2(1)]);
             pause(this.delay);
         end
         
@@ -272,6 +280,69 @@ classdef optimizer < handle
                 end
             end
             
+        end
+        
+        function [x, y] = returnrandsearch(this, x0, a, eps)
+            fprintf('==== Метод минимизации случайного поиска с возвратом при неудачном шаге ====\nБазовая точка: x0=[%f, %f]\nТочность: eps=%f;\n\n', [x0(1),x0(2),eps]);
+            this.count = 0;
+            
+            lastpoint = x0;
+            
+            xk = x0;
+            l = a;
+            
+            k = 0;
+            j = 1;
+            fk = this.f(xk);
+            
+            this.draw_point(xk(2), xk(1));
+            lastpoint=xk;
+                        
+            while true
+                r = this.rand();
+                xNew = xk + l * r / sqrt(sum(r.*r));
+                fNew = this.f(xNew);
+                
+                if (fNew < fk)
+                    xk = xNew;
+                    fk = fNew;
+                    k = k + 1;
+                   
+                    this.draw_point(xk(2), xk(1));
+                    this.draw_line(lastpoint, xk);
+                    lastpoint=xk;
+            
+            
+                    if (k > this.max_it) %Максимальное число шагов
+                        x = xk;
+                        y = fk;
+                        fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n', [x(1),x(2), y,this.count]);
+                        return;
+                    end
+                    j = 0;
+                else
+                    if (j < this.div_val)
+                        j = j + 1;
+                    else
+                        if (l < eps) %Превышено количество неудачных попыток с заданным l - уменьшаем l 
+                            x = xk;
+                            y = fk;
+                            fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n', [x(1),x(2), y,this.count]);
+                            return;
+                        else
+                            l = l * this.delta;
+                            j = 1;
+                        end
+                    end
+                end
+            end
+			
+			
+                    
+        end
+        
+        function [r] = rand(this)
+            r = 2*randn(1, this.n) - ones(1, this.n);
         end
        
         %% использование возможностей Optimization Toolbox Matlab
