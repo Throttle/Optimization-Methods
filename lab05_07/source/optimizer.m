@@ -1,14 +1,15 @@
 classdef optimizer < handle
     properties (Constant = true)
         n = 2,
-        delay = 0.3,
+        delay = 0.1,
         alpha = 1,
         betta = 0.5,
         gamma = 2,
         delta = 0.5,
         point_size = 22,
         max_it = 500, 
-        div_val = 10
+        div_val = 10,
+        eps = 0.1
     end
     
     properties
@@ -22,16 +23,29 @@ classdef optimizer < handle
         function y = f(this, x)
             this.count = this.count + 1;
             % 1ая функция
-            y = 4*x(1)*x(2) + 7*x(1)*x(1) + 4*x(2)*x(2) + 6*sqrt(5)*x(1) - 12*sqrt(5)*x(2) + 51;
+            %y = 4*x(1)*x(2) + 7*x(1)*x(1) + 4*x(2)*x(2) + 6*sqrt(5)*x(1) - 12*sqrt(5)*x(2) + 51;
+            %return;
             % 2ая функция
-            %y = x(2)*x(2)*x(2) + 2 * x(1) * x(2) + 1 / sqrt(x(1)*x(2));
+            if abs(x(1)) < this.eps
+                x(1) = x(1) + sign(x(1)) * this.eps;
+            end
+            
+            if abs(x(2)) < this.eps
+                x(2) = x(2) + sign(x(2)) * this.eps;
+            end
+            
+            if x(1) < 0 || x(2) < 0
+                y = 500;
+            else
+                y = x(2)*x(2)*x(2) + 2 * x(1) * x(2) + 1 / sqrt(x(1) * x(2));
+            end
         end
         
         %% сброс счестчика вызова функции
         function reset(this)
             this.count = 0;
         end
-        
+                
         %% построение графика функции в виде семейства линий уровня минимизируемых функций
         function draw(this, a1, b1, a2, b2, n)
             step1 = (b1 - a1) / n;
@@ -47,11 +61,13 @@ classdef optimizer < handle
                 end
             end
             
+            figure(2);
+            mesh(x2,x1,f);
+            
             figure(1);
-            levels = -30:5:40;
+            levels = -30:5:50;
             [C,h] = contour(x2, x1, f, levels);
-            %figure(2);
-            %surface(x2,x1,f);
+            
             %[C,h] = contour(x2, x1, f);
             set(h,'ShowText','on')
             %colormap cool
@@ -282,11 +298,9 @@ classdef optimizer < handle
             
         end
         
-        function [x, y] = returnrandsearch(this, x0, a, eps)
+        function [x, y] = rand_search(this, x0, a, eps)
             fprintf('==== Метод минимизации случайного поиска с возвратом при неудачном шаге ====\nБазовая точка: x0=[%f, %f]\nТочность: eps=%f;\n\n', [x0(1),x0(2),eps]);
             this.count = 0;
-            
-            lastpoint = x0;
             
             xk = x0;
             l = a;
@@ -336,9 +350,6 @@ classdef optimizer < handle
                     end
                 end
             end
-			
-			
-                    
         end
         
         function [r] = rand(this)
@@ -347,9 +358,10 @@ classdef optimizer < handle
        
         %% использование возможностей Optimization Toolbox Matlab
         function [resx, resf] = fminsearch(this, x0, eps)
+            this.reset();
             fprintf('==== Optimization Toolbox Matlab ====\nБазовая точка: x0=[%f, %f]\nТочность: eps=%f;\n\n', [x0(1),x0(2),eps]);
             [resx, resf] = fminsearch(@this.f, x0, optimset('TolX', eps));
-            fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n', [resx(1),resx(2),resf,this.count]);
+            fprintf('>>>> Достигнута требуемая точность.\nТочка минимума: xmin=[%f, %f], fmin=%f;\nКол-во вычислений функции: count=%d.\n\n', [resx(1),resx(2),resf,this.count]);
         end
     end
 end
