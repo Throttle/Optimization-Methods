@@ -15,13 +15,13 @@ hold on;
 %% Первая часть
 %optimizer.draw(-6, 2, 0, 9, 100);
 % использование метода минизации по правильному симплексу
-%optimizer.simple_simplex(x0, a, eps3);
+%optimizer.simple_simplex(x0, a, eps2);
 
 % использование метода минизации по деформируемому симплексу
 %optimizer.downhill_simplex(x0, a, eps3);
 
 % использование метода минимизациии случайного поиска в возвратом
-%optimizer.returnrandsearch(x0, a, eps3);
+%optimizer.rand_search(x0, a, eps3);
 
 %optimizer.fminsearch(x0, eps3);
 
@@ -29,14 +29,14 @@ hold on;
 optimizer.draw(-2, 5, -2, 5, 100);
 
 % использование метода минизации по правильному симплексу
-%optimizer.simple_simplex(x02, a2, eps2);
+%optimizer.simple_simplex(x02, a2, eps3);
 
 % использование метода минизации по деформируемому симплексу
-%optimizer.downhill_simplex(x02, a2, eps2);
+%optimizer.downhill_simplex(x02, a2, eps3);
 
 % использование метода минимизациии случайного поиска в возвратом
-%optimizer.returnrandsearch(x02, a2, eps2);
-
-optimizer.fminsearch(x02, eps2);
+optimizer.rand_search(x02, a2, eps3);
+%
+%optimizer.fminsearch(x02, eps3);
 
 hold off;

@@ -26,17 +26,30 @@ classdef optimizer < handle
             %y = 4*x(1)*x(2) + 7*x(1)*x(1) + 4*x(2)*x(2) + 6*sqrt(5)*x(1) - 12*sqrt(5)*x(2) + 51;
             %return;
             % 2ая функция
-            if abs(x(1)) < this.eps
-                x(1) = x(1) + sign(x(1)) * this.eps;
-            end
             
-            if abs(x(2)) < this.eps
-                x(2) = x(2) + sign(x(2)) * this.eps;
-            end
             
-            if x(1) < 0 || x(2) < 0
+            if x(1) <= 0 || x(2) <= 0
                 y = 500;
             else
+                if abs(x(1)) < this.eps
+                    s1 = sign(x(1));
+                    if abs(s1) > 0
+                        x(1) = x(1) + sign(x(1)) * this.eps;
+                    else
+                        x(1) = this.eps;
+                    end
+                
+                end
+
+                if abs(x(2)) < this.eps
+                    s2 = sign(x(2));
+                    if abs(s2)>0
+                        x(2) = x(2) + sign(x(2)) * this.eps;
+                    else
+                        x(2) = this.eps;
+                    end
+
+                end
                 y = x(2)*x(2)*x(2) + 2 * x(1) * x(2) + 1 / sqrt(x(1) * x(2));
             end
         end
@@ -61,8 +74,8 @@ classdef optimizer < handle
                 end
             end
             
-            figure(2);
-            mesh(x2,x1,f);
+            %figure(2);
+            %mesh(x2,x1,f);
             
             figure(1);
             levels = -30:5:50;
