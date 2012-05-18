@@ -1,0 +1,59 @@
+\chapter{Описание работы}
+\section{Задание}
+Для квадратичной функции $f$ задать три ограничения (два линейных и одно нелинейное) в
+виде нестрогих неравенств, чтобы:
+
+\begin{enumerate}
+	\item допустимое множество было выпуклым;
+	\item точка минимума квадратичной функции не принадлежала допустимому множеству.
+\end{enumerate}
+
+Функция для минимизации (\eqref{F:function}):
+
+\begin{equation}
+y=4 x_{1} x_{2} + 7x_1^2 + 4x_2^2 + 6 \sqrt{5}x_1 -12\sqrt{5}x_2 + 51.
+\label{F:function}
+\end{equation}
+
+\section{Решение}
+
+Стартовая точка: $x\in [0,-\sqrt{5}]$.
+
+\subsection{Выбранные ограничения}
+Выбранные ограничения(\eqref{F:borders}): 
+
+\begin{equation}
+\left\{\begin{matrix}
+-2x_1+3x_2-14
+\\ -x_1-3
+\\ (x_1+2)^2+(x_2-4)^2-15
+\end{matrix}\right.
+\label{F:borders}
+\end{equation}
+
+\subsection{Минимизация квадратичной функции $f$}
+В таблице \ref{tb:tab1} приведены результаты работы.
+
+\begin{table}[!ht]
+\caption{Результаты работы метода}
+\begin{tabular}{|p{0.15\textwidth}|p{0.15\textwidth}|p{0.15\textwidth}|p{0.25\textwidth}|p{0.13\textwidth}|}
+\hline
+Метод & Точность& Количество вычислений функции & $X$ & $f(X)$\\
+\hline
+штрафных функций & 0.001 & 993 & [-1.710983, 3.532580] & -20.512324\\
+\hline
+барьерных функций & 0.001 & 1304 & [-1.625131, 3.583246] & -20.399014\\
+\hline
+\end{tabular}
+\label{tb:tab1}
+\end{table}
+
+
+%
+% % В начале раздела  можно напомнить его цель
+%
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "rpz"
+%%% End: 
